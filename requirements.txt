@@ -1,0 +1,8 @@
+Flask==3.0.0
+flask-cors==4.0.0
+openai-whisper==20231117
+yt-dlp==2023.11.16
+pysrt==1.1.2
+gTTS==2.4.0
+numpy==1.24.3
+torch==2.1.0

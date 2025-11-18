@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Video Dubbing with Lip Sync</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            margin-top: 15px;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(56, 239, 125, 0.3);
+        }
+
+        .progress-container {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .progress-container.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .status-message {
+            text-align: center;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .status-info {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .detected-lang {
+            text-align: center;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 25px;
+            border-radius: 5px;
+            font-size: 13px;
+            color: #555;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+
+        .backend-status {
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .backend-online {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .backend-offline {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 AI Video Dubbing</h1>
+        <p class="subtitle">Translate and dub YouTube videos with lip-sync</p>
+
+        <!-- Backend Status Indicator -->
+        <div id="backendStatus" class="backend-status backend-offline">
+            🔴 Checking backend connection...
+        </div>
+
+        <div class="info-box">
+            <strong>ℹ️ Features:</strong>
+            <ul>
+                <li>Automatic language detection</li>
+                <li>Best-effort lip-sync matching</li>
+                <li>Supports videos up to 60 minutes</li>
+                <li>Auto-chunking for long videos (10+ min)</li>
+                <li>Works on mobile & desktop</li>
+            </ul>
+        </div>
+
+        <form id="dubbingForm">
+            <div class="form-group">
+                <label for="videoUrl">YouTube Video URL</label>
+                <input 
+                    type="text" 
+                    id="videoUrl" 
+                    placeholder="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    required
+                />
+            </div>
+
+            <div class="form-group">
+                <label for="targetLang">Target Language (Hindi default)</label>
+                <select id="targetLang">
+                    <option value="hi" selected>Hindi (हिन्दी)</option>
+                    <option value="es">Spanish (Español)</option>
+                    <option value="fr">French (Français)</option>
+                    <option value="de">German (Deutsch)</option>
+                    <option value="it">Italian (Italiano)</option>
+                    <option value="pt">Portuguese (Português)</option>
+                    <option value="ja">Japanese (日本語)</option>
+                    <option value="ko">Korean (한국어)</option>
+                    <option value="zh">Chinese (中文)</option>
+                    <option value="ar">Arabic (العربية)</option>
+                    <option value="ru">Russian (Русский)</option>
+                    <option value="tr">Turkish (Türkçe)</option>
+                    <option value="bn">Bengali (বাংলা)</option>
+                    <option value="ta">Tamil (தமிழ்)</option>
+                    <option value="te">Telugu (తెలుగు)</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                🚀 Start Processing
+            </button>
+        </form>
+
+        <div class="progress-container" id="progressContainer">
+            <div id="detectedLang" class="detected-lang" style="display: none;"></div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="progress-text" id="progressText">0%</div>
+            
+            <div id="statusMessage" class="status-message status-info"></div>
+
+            <button type="button" class="btn btn-success" id="downloadBtn" style="display: none;">
+                📥 Download Dubbed Video
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        
+        // ⚠️ IMPORTANT: Change this to your backend URL
+        const API_BASE_URL = 'http://localhost:5000/api';
+        
+        let currentJobId = null;
+        let pollInterval = null;
+
+        // ============================================
+        // DOM ELEMENTS
+        // ============================================
+        
+        const form = document.getElementById('dubbingForm');
+        const videoUrlInput = document.getElementById('videoUrl');
+        const targetLangSelect = document.getElementById('targetLang');
+        const submitBtn = document.getElementById('submitBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const statusMessage = document.getElementById('statusMessage');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const detectedLang = document.getElementById('detectedLang');
+        const backendStatus = document.getElementById('backendStatus');
+
+        // ============================================
+        // LANGUAGE MAPPING
+        // ============================================
+        
+        const languageNames = {
+            'en': 'English',
+            'hi': 'Hindi',
+            'es': 'Spanish',
+            'fr': 'French',
+            'de': 'German',
+            'it': 'Italian',
+            'pt': 'Portuguese',
+            'ja': 'Japanese',
+            'ko': 'Korean',
+            'zh': 'Chinese',
+            'ar': 'Arabic',
+            'ru': 'Russian',
+            'tr': 'Turkish',
+            'bn': 'Bengali',
+            'ta': 'Tamil',
+            'te': 'Telugu'
+        };
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        
+        // Form submission
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const videoUrl = videoUrlInput.value.trim();
+            const targetLang = targetLangSelect.value;
+
+            if (!videoUrl) {
+                showStatus('❌ Please enter a valid YouTube URL', 'error');
+                return;
+            }
+
+            // Validate YouTube URL
+            if (!isValidYouTubeUrl(videoUrl)) {
+                showStatus('❌ Please enter a valid YouTube URL (youtube.com or youtu.be)', 'error');
+                return;
+            }
+
+            // Start processing
+            await startProcessing(videoUrl, targetLang);
+        });
+
+        // Download button click
+        downloadBtn.addEventListener('click', () => {
+            if (currentJobId) {
+                downloadVideo(currentJobId);
+            }
+        });
+
+        // ============================================
+        // VALIDATION FUNCTIONS
+        // ============================================
+        
+        function isValidYouTubeUrl(url) {
+            const patterns = [
+                /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=)[a-zA-Z0-9_-]+/,
+                /^(https?:\/\/)?(www\.)?(youtu\.be\/)[a-zA-Z0-9_-]+/,
+                /^(https?:\/\/)?(www\.)?(youtube\.com\/embed\/)[a-zA-Z0-9_-]+/,
+                /^(https?:\/\/)?(www\.)?(youtube\.com\/v\/)[a-zA-Z0-9_-]+/
+            ];
+            return patterns.some(pattern => pattern.test(url));
+        }
+
+        // ============================================
+        // VIDEO PROCESSING FUNCTIONS
+        // ============================================
+        
+        async function startProcessing(videoUrl, targetLang) {
+            try {
+                // Disable form
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = 'Processing <span class="spinner"></span>';
+                
+                // Show progress container
+                progressContainer.classList.add('active');
+                downloadBtn.style.display = 'none';
+                detectedLang.style.display = 'none';
+                updateProgress(0, 'Starting...');
+
+                // Send request to backend
+                const response = await fetch(`${API_BASE_URL}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        video_url: videoUrl,
+                        target_lang: targetLang
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to start processing');
+                }
+
+                const data = await response.json();
+                currentJobId = data.job_id;
+
+                showStatus('✅ Job started successfully! Job ID: ' + currentJobId.substring(0, 8) + '...', 'info');
+
+                // Start polling for status
+                pollStatus();
+
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('❌ Error starting processing: ' + error.message, 'error');
+                resetForm();
+            }
+        }
+
+        // ============================================
+        // STATUS POLLING
+        // ============================================
+        
+        function pollStatus() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+            }
+
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/status/${currentJobId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to get status');
+                    }
+
+                    const data = await response.json();
+                    
+                    // Update progress
+                    updateProgress(data.progress || 0, data.status || 'Processing');
+
+                    // Show detected language if available
+                    if (data.detected_language) {
+                        detectedLang.style.display = 'block';
+                        detectedLang.textContent = `🔍 Detected Language: ${languageNames[data.detected_language] || data.detected_language}`;
+                    }
+
+                    // Show custom message if available
+                    if (data.message) {
+                        showStatus('ℹ️ ' + data.message, 'info');
+                    }
+
+                    // Check if completed
+                    if (data.status === 'completed') {
+                        clearInterval(pollInterval);
+                        handleCompletion();
+                    } else if (data.status === 'error') {
+                        clearInterval(pollInterval);
+                        showStatus('❌ Error: ' + (data.error || 'Unknown error occurred'), 'error');
+                        resetForm();
+                    }
+
+                } catch (error) {
+                    console.error('Polling error:', error);
+                    clearInterval(pollInterval);
+                    showStatus('❌ Error checking status: ' + error.message, 'error');
+                    resetForm();
+                }
+            }, 2000); // Poll every 2 seconds
+        }
+
+        // ==================================
